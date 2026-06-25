@@ -1,0 +1,37 @@
+# Data — never commit these
+darwin/data/
+data/
+
+# ChromaDB vector store
+*.chroma
+chroma/
+
+# SQLite database
+*.db
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+venv/
+env/
+.env/
+*.egg-info/
+
+# Simulation configs (auto-generated)
+darwin/data/sim_configs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
