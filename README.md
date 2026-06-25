@@ -19,9 +19,6 @@ Knowledge Base → Knowledge Auditor → Knowledge Gap Detector
 → Failure Memory → Novel Theory Output
 ```
 
-**Phase 1 (this repo):** Modules 1–5
-- Knowledge Base, Hypothesis Generator, Red-Team Agent, Theory Graph, Confidence Tracker
-
 ---
 
 ## Setup
@@ -82,23 +79,47 @@ darwin/data/
 
 ## Configuration
 
-Edit `config.py`:
+Edit `config.py` or use environment variables:
 
-```python
-OLLAMA_MODEL = "qwen2.5:14b"   # change to your model
-ARXIV_MAX_RESULTS = 20          # papers per query
+```bash
+# Ollama (default)
+export OLLAMA_MODEL=qwen2.5:14b
+
+# Claude API
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# NVIDIA NIM
+export NVIDIA_API_KEY=...
+export DARWIN_PRIMARY=nvidia
+export DARWIN_MODEL=meta/llama-3.1-70b-instruct
+
+# Fallback provider
+export DARWIN_FALLBACK=anthropic
+export DARWIN_FB_MODEL=claude-sonnet-4-6
 ```
 
 ---
 
-## Roadmap
+## Build Status
 
-- [x] Phase 1: Knowledge Base + Hypothesis Generator + Red Team + Memory
-- [ ] Phase 2: Multi-Agent Debate (6 specialized agents)
-- [ ] Phase 3: Prediction Generator + Physics Validator
-- [ ] Phase 4: Simulation Engine (gem5, GPGPU-Sim)
-- [ ] Phase 5: Evolution Engine + Theory Compression
-- [ ] Phase 6: Meta-Learner + Surprise Engine + Reality Checker
+| Phase | Planned | Built | Status |
+|---|---|---|---|
+| 1 | Knowledge Base + Hypothesis Generator + Red Team + Memory | ArXiv ingestion, ChromaDB, Knowledge Auditor, Hypothesis Generator, Red Team, Theory Graph, Failure Memory, Confidence Tracker | ✅ |
+| 2 | Multi-Agent Debate (6 agents) | Physics, Manufacturing, Cost, Performance, Reliability, Environmental agents + Debate Engine | ✅ |
+| 3 | Prediction Generator + Physics Validator | Both built + falsification enforcement + vague prediction rewriter | ✅ |
+| 4 | Simulation Engine (gem5, GPGPU-Sim) | Fast LLM estimator + gem5/GPGPU-Sim config generator + Resource Manager | ⚠️ Partial |
+| 5 | Evolution Engine + Theory Compression | Evolution Engine + Theory Compressor + Discovery Scorer + Theory Merger + Diversity Manager | ✅ |
+| 6 | Meta-Learner + Surprise Engine + Reality Checker | All 3 built | ✅ |
+
+**Bonus modules not in original plan:**
+- Question Generator
+- Assumption Miner
+- Research Planner
+- LLM Client (Ollama + Claude API + NVIDIA NIM)
+
+> **Phase 4 note:** gem5 and GPGPU-Sim configs are generated and written to disk — but actually running them requires those tools installed on your machine. The fast LLM estimator runs instead. Real simulation needs a proper Linux server with gem5 compiled.
+
+**5.5 out of 6 fully complete.** Phase 4 needs gem5 installed to be 100%.
 
 ---
 
