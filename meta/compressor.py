@@ -1,9 +1,10 @@
 import json
 import sqlite3
-import requests
 from pathlib import Path
 from typing import Dict, List, Optional
 from rich.console import Console
+
+# FIX: removed `import requests` — no longer calling Ollama directly
 
 console = Console()
 
@@ -56,10 +57,12 @@ class TheoryCompressor:
 
     MIN_THEORIES = 8   # Minimum theories before compression makes sense
 
-    def __init__(self, ollama_url: str, model: str, db_path: Path):
-        self.ollama_url = ollama_url
-        self.model      = model
-        self.db_path    = db_path
+    # FIX: constructor was (self, ollama_url: str, model: str, db_path: Path) — crashed
+    # at startup because main.py passes (self.llm, DB_PATH): DB_PATH landed in the
+    # `model` slot and `db_path` was never provided.
+    def __init__(self, llm, db_path: Path):
+        self.llm     = llm
+        self.db_path = db_path
         self._init_db()
 
     def _init_db(self):
@@ -78,20 +81,6 @@ class TheoryCompressor:
                 )
             """)
             conn.commit()
-
-    def _call_llm(self, prompt: str) -> str:
-        resp = requests.post(
-            f"{self.ollama_url}/api/generate",
-            json={
-                "model": self.model,
-                "prompt": prompt,
-                "stream": False,
-                "format": "json",
-                "options": {"temperature": 0.5},
-            },
-            timeout=180,
-        )
-        return resp.json()["response"]
 
     def _load_theories(self) -> List[Dict]:
         with sqlite3.connect(self.db_path) as conn:
@@ -165,7 +154,9 @@ class TheoryCompressor:
             )
 
             try:
-                result = json.loads(self._call_llm(prompt))
+                # FIX: was json.loads(self._call_llm(prompt)) hitting Ollama directly.
+                # Temperature 0.5 preserved.
+                result = self.llm.call_json(prompt, temperature=0.5)
             except Exception as e:
                 console.print(f"  [red]Compressor error: {e}[/red]")
                 continue
