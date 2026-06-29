@@ -1,7 +1,8 @@
 import json
-import requests
 from typing import List, Dict, Tuple
 from rich.console import Console
+
+# FIX: removed `import requests` — no longer calling Ollama directly
 
 console = Console()
 
@@ -33,23 +34,12 @@ Respond ONLY in JSON:
 
 
 class RedTeamAgent:
-    def __init__(self, ollama_url: str, model: str):
-        self.ollama_url = ollama_url
-        self.model = model
-
-    def _call_llm(self, prompt: str) -> str:
-        resp = requests.post(
-            f"{self.ollama_url}/api/generate",
-            json={
-                "model": self.model,
-                "prompt": prompt,
-                "stream": False,
-                "format": "json",
-                "options": {"temperature": 0.2},  # low temp = critical thinking
-            },
-            timeout=120,
-        )
-        return resp.json()["response"]
+    # FIX: constructor was (self, ollama_url: str, model: str) — crashed at startup
+    # because main.py passes (self.llm) — one argument, not two.
+    # Now accepts the unified LLMClient and delegates all calls through it,
+    # so primary/fallback routing and provider switching work correctly.
+    def __init__(self, llm):
+        self.llm = llm
 
     def attack(self, hypothesis: Dict) -> Dict:
         pred = hypothesis.get("prediction", {})
@@ -60,7 +50,9 @@ class RedTeamAgent:
             prediction=pred.get("claim", ""),
         )
         try:
-            result = json.loads(self._call_llm(prompt))
+            # FIX: was json.loads(self._call_llm(prompt)) hitting Ollama directly.
+            # Low temperature (0.2) preserved — critical thinking, not creativity.
+            result = self.llm.call_json(prompt, temperature=0.2)
             result["hypothesis_id"] = hypothesis.get("id")
             return result
         except Exception as e:
