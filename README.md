@@ -66,7 +66,6 @@ Novel Theory Output
 ### Requirements
 - Python 3.10+
 - [Ollama](https://ollama.ai) running locally
-- At least 8GB RAM
 
 ### 1. Install dependencies
 ```bash
