@@ -174,29 +174,37 @@ class DARWIN:
         console.print("\n[bold]══ Red Team ══[/bold]")
         after_rt, rt_rejected = self.red_team.filter_batch(hypotheses)
         for r in rt_rejected:
-            self.failure_mem.record(r["hypothesis"], r["attack"].get("fatal_flaws", ["unknown"]), "red_team")
-        if not after_rt: return None
+            # FIX: was self.failure_mem.record(r["hypothesis"], ...) which passed a
+            # string into record(theory: Dict, ...). record() then called
+            # theory.get("id") on a string → AttributeError. Every other rejection
+            # stage passes the full hypothesis dict. Now consistent.
+            self.failure_mem.record(r, r.get("attack", {}).get("fatal_flaws", ["unknown"]), "red_team")
+        if not after_rt:
+            return None
 
         # Multi-Agent Debate
         console.print("\n[bold]══ Multi-Agent Debate ══[/bold]")
         after_debate, debate_rejected = self.debate.filter_batch(after_rt)
         for h in debate_rejected:
             self.failure_mem.record(h, h.get("debate", {}).get("all_findings", ["rejected"])[:3], "debate")
-        if not after_debate: return None
+        if not after_debate:
+            return None
 
         # Prediction Generator
         console.print("\n[bold]══ Prediction Generator ══[/bold]")
         after_pred, no_pred = self.prediction.filter_batch(after_debate)
         for h in no_pred:
             self.failure_mem.record(h, ["No valid prediction"], "prediction")
-        if not after_pred: return None
+        if not after_pred:
+            return None
 
         # Physics Validator
         after_physics, phys_rejected = self.physics.filter_batch(after_pred)
         for h in phys_rejected:
             violations = [v.get("explanation","") for v in h.get("physics_validation",{}).get("violations",[])]
             self.failure_mem.record(h, violations or ["Physics violation"], "physics_validator")
-        if not after_physics: return None
+        if not after_physics:
+            return None
 
         # Simulation
         simulated, sim_skipped = self.simulation.simulate_batch(after_physics, top_n=5)
