@@ -1,9 +1,10 @@
 import json
-import requests
 import sqlite3
 from pathlib import Path
 from typing import Dict, List, Tuple
 from rich.console import Console
+
+# FIX: removed `import requests` — no longer calling Ollama directly
 
 console = Console()
 
@@ -76,10 +77,12 @@ Respond ONLY in JSON:
 
 
 class EvolutionEngine:
-    def __init__(self, ollama_url: str, model: str, db_path: Path):
-        self.ollama_url = ollama_url
-        self.model      = model
-        self.db_path    = db_path
+    # FIX: constructor was (self, ollama_url: str, model: str, db_path: Path) — crashed
+    # at startup because main.py passes (self.llm, DB_PATH): DB_PATH ended up in the
+    # `model` slot and `db_path` was never provided.
+    def __init__(self, llm, db_path: Path):
+        self.llm     = llm
+        self.db_path = db_path
         self._init_db()
 
     def _init_db(self):
@@ -95,20 +98,6 @@ class EvolutionEngine:
                 )
             """)
             conn.commit()
-
-    def _call_llm(self, prompt: str, temp: float = 0.8) -> str:
-        resp = requests.post(
-            f"{self.ollama_url}/api/generate",
-            json={
-                "model": self.model,
-                "prompt": prompt,
-                "stream": False,
-                "format": "json",
-                "options": {"temperature": temp},
-            },
-            timeout=180,
-        )
-        return resp.json()["response"]
 
     def _log(self, generation: int, parent_ids: List[str], child_id: str, op: str):
         with sqlite3.connect(self.db_path) as conn:
@@ -172,7 +161,9 @@ class EvolutionEngine:
         )
 
         try:
-            child = json.loads(self._call_llm(prompt))
+            # FIX: was json.loads(self._call_llm(prompt)) hitting Ollama directly.
+            # High temperature 0.8 preserved — crossbreeding needs creativity.
+            child = self.llm.call_json(prompt, temperature=0.8)
         except Exception as e:
             console.print(f"[red]Crossbreed error: {e}[/red]")
             return {}
@@ -199,7 +190,8 @@ class EvolutionEngine:
         )
 
         try:
-            mutant = json.loads(self._call_llm(prompt))
+            # FIX: was json.loads(self._call_llm(prompt)) hitting Ollama directly.
+            mutant = self.llm.call_json(prompt, temperature=0.8)
         except Exception as e:
             console.print(f"[red]Mutation error: {e}[/red]")
             return {}
