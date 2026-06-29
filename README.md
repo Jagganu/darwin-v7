@@ -8,15 +8,55 @@ A self-improving GPU/CPU architecture research engine.
 ## Architecture
 
 ```
-Knowledge Base → Knowledge Auditor → Knowledge Gap Detector
-→ Question Generator → Assumption Miner → Hypothesis Generator
-→ Red-Team Agent → Multi-Agent Debate → Prediction Generator
-→ Uncertainty Engine → Physics Validator → Resource Manager
-→ Simulation Engine → Reality Checker → Surprise Engine
-→ Confidence Tracker → Discovery Scorer → Theory Merger
-→ Diversity Manager → Evolution Engine → Theory Graph
-→ Meta-Learner → Theory Compression → Research Planner
-→ Failure Memory → Novel Theory Output
+Knowledge Base (IEEE papers, patents, benchmarks, hardware data)
+      ↓
+Knowledge Auditor → finds contradictions, anomalies
+      ↓                    ↑
+Knowledge Gap Detector     │ Research Planner feeds back here
+      ↓                    │ (targeted contradiction hunt)
+Question Generator ←───────┘
+      ↓                    ↑
+Assumption Miner           │ Surprise Engine feeds back here
+      ↓                    │ (new research branch launched)
+Hypothesis Generator ←─────┘
+      ↓                    ↑
+Red-Team Agent             │ Meta-Learner feeds back here
+      ↓                    │ (biases toward what works)
+Multi-Agent Debate (6 agents)
+      ↓
+Prediction Generator → no prediction = theory dies
+      ↓
+Uncertainty Engine → maps known unknowns
+      ↓
+Physics Validator
+      ↓
+Resource Manager → 1000 → 50 → 5 → deep sim
+      ↓
+Simulation Engine (gem5, GPGPU-Sim, McPAT, HotSpot)
+      ↓
+Reality Checker → cross-reference real hardware data
+      ↓
+Surprise Engine ───────────────────────→ Question Generator
+      ↓
+Confidence Tracker → updated with real evidence
+      ↓
+Discovery Scorer (novelty/performance/cost/manufacturability)
+      ↓
+Theory Merger + Diversity Manager
+      ↓
+Evolution Engine
+      ↓
+Theory Graph → stores lineage and causality
+      ↓
+Meta-Learner ──────────────────────────→ Hypothesis Generator
+      ↓
+Theory Compression → many theories → one principle → new law
+      ↓
+Research Planner ──────────────────────→ Knowledge Auditor
+      ↓
+Failure Memory DB
+      ↓
+Novel Theory Output
 ```
 
 ---
