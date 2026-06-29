@@ -1,7 +1,7 @@
-import json
-import requests
 from typing import Dict, List
 from rich.console import Console
+
+# FIX: removed `import json` and `import requests` — no longer calling Ollama directly
 
 console = Console()
 
@@ -51,23 +51,10 @@ WEIGHTS = {
 
 
 class DiscoveryScorer:
-    def __init__(self, ollama_url: str, model: str):
-        self.ollama_url = ollama_url
-        self.model = model
-
-    def _call_llm(self, prompt: str) -> str:
-        resp = requests.post(
-            f"{self.ollama_url}/api/generate",
-            json={
-                "model": self.model,
-                "prompt": prompt,
-                "stream": False,
-                "format": "json",
-                "options": {"temperature": 0.3},
-            },
-            timeout=120,
-        )
-        return resp.json()["response"]
+    # FIX: constructor was (self, ollama_url: str, model: str) — crashed at startup
+    # because main.py passes (self.llm) — one argument, not two.
+    def __init__(self, llm):
+        self.llm = llm
 
     def score(self, hypothesis: Dict) -> Dict:
         pred    = hypothesis.get("predictions", {}).get("primary_prediction", {})
@@ -84,7 +71,9 @@ class DiscoveryScorer:
         )
 
         try:
-            result = json.loads(self._call_llm(prompt))
+            # FIX: was json.loads(self._call_llm(prompt)) hitting Ollama directly.
+            # Temperature 0.3 preserved.
+            result = self.llm.call_json(prompt, temperature=0.3)
         except Exception as e:
             console.print(f"[red]Scorer error: {e}[/red]")
             result = {
