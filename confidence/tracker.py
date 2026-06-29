@@ -18,7 +18,7 @@ class ConfidenceTracker:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS confidence (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    theory_id TEXT,
+                    theory_id TEXT UNIQUE,
                     confidence REAL,
                     evidence_for TEXT,
                     evidence_against TEXT,
@@ -26,6 +26,18 @@ class ConfidenceTracker:
                     untested_regions TEXT,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
+            """)
+            # FIX: migration safety — if the table already existed without the
+            # UNIQUE constraint, deduplicate then create the index so _save()
+            # UPSERT works correctly on old databases too.
+            conn.execute("""
+                DELETE FROM confidence WHERE id NOT IN (
+                    SELECT MAX(id) FROM confidence GROUP BY theory_id
+                )
+            """)
+            conn.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_confidence_theory
+                ON confidence(theory_id)
             """)
             conn.commit()
 
@@ -72,10 +84,25 @@ class ConfidenceTracker:
         return record
 
     def _save(self, record: Dict):
+        # FIX: was INSERT every time, creating unbounded rows per theory and
+        # requiring ORDER BY id DESC workarounds in get(). Now uses INSERT … ON
+        # CONFLICT … DO UPDATE (SQLite UPSERT) so each theory_id has exactly
+        # one row, always up-to-date.
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
-                "INSERT INTO confidence (theory_id, confidence, evidence_for, evidence_against, known_unknowns, untested_regions) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
+                """
+                INSERT INTO confidence
+                    (theory_id, confidence, evidence_for, evidence_against,
+                     known_unknowns, untested_regions, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(theory_id) DO UPDATE SET
+                    confidence        = excluded.confidence,
+                    evidence_for      = excluded.evidence_for,
+                    evidence_against  = excluded.evidence_against,
+                    known_unknowns    = excluded.known_unknowns,
+                    untested_regions  = excluded.untested_regions,
+                    updated_at        = CURRENT_TIMESTAMP
+                """,
                 (
                     record["theory_id"],
                     record["confidence"],
@@ -91,7 +118,7 @@ class ConfidenceTracker:
         with sqlite3.connect(self.db_path) as conn:
             row = conn.execute(
                 "SELECT theory_id, confidence, evidence_for, evidence_against, known_unknowns, untested_regions "
-                "FROM confidence WHERE theory_id = ? ORDER BY updated_at DESC LIMIT 1",
+                "FROM confidence WHERE theory_id = ?",
                 (theory_id,),
             ).fetchone()
         if row:
