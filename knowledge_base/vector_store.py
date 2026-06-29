@@ -40,16 +40,27 @@ class VectorStore:
         for i in range(0, len(documents), batch_size):
             b_docs = documents[i:i + batch_size]
             b_meta = metadatas[i:i + batch_size]
-            b_ids = ids[i:i + batch_size]
+            b_ids  = ids[i:i + batch_size]
 
             try:
-                existing = set(self.collection.get(ids=b_ids)["ids"])
-            except Exception:
+                # FIX: added include=[] — we only need the IDs back, no need to
+                # fetch embeddings or documents just to check existence.
+                # FIX: was `except Exception: existing = set()` which silently
+                # swallowed all ChromaDB errors and caused every document to be
+                # re-added on any failure. Now logs a visible warning so errors
+                # are not invisible.
+                existing = set(self.collection.get(ids=b_ids, include=[])["ids"])
+            except Exception as e:
+                console.print(
+                    f"[yellow]Warning: ChromaDB ID check failed for batch "
+                    f"{i}–{i + len(b_ids)} ({e}). Adding all {len(b_ids)} docs "
+                    f"in this batch (may create duplicates).[/yellow]"
+                )
                 existing = set()
 
             new_docs = [d for d, id_ in zip(b_docs, b_ids) if id_ not in existing]
             new_meta = [m for m, id_ in zip(b_meta, b_ids) if id_ not in existing]
-            new_ids = [id_ for id_ in b_ids if id_ not in existing]
+            new_ids  = [id_ for id_ in b_ids if id_ not in existing]
 
             if new_docs:
                 self.collection.add(documents=new_docs, metadatas=new_meta, ids=new_ids)
