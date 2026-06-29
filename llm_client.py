@@ -13,12 +13,16 @@ Priority order (configurable in config.py):
 """
 
 import json
-import os
+import re
 import requests
 from typing import Optional
 from rich.console import Console
 
 console = Console()
+
+# FIX: raised from 2048 — meta-learning summaries and theory mergers
+# can easily exceed 2048 tokens and silently truncate mid-JSON.
+MAX_TOKENS = 4096
 
 
 class LLMClient:
@@ -89,7 +93,7 @@ class LLMClient:
             },
             json={
                 "model": model,
-                "max_tokens": 2048,
+                "max_tokens": MAX_TOKENS,  # FIX: was hardcoded 2048
                 "temperature": temperature,
                 "system": system,
                 "messages": [{"role": "user", "content": prompt}],
@@ -114,7 +118,7 @@ class LLMClient:
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": temperature,
-            "max_tokens": 2048,
+            "max_tokens": MAX_TOKENS,  # FIX: was hardcoded 2048
         }
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
@@ -193,15 +197,24 @@ class LLMClient:
         raise RuntimeError("All LLM providers failed")
 
     def call_json(self, prompt: str, temperature: float = 0.5) -> dict:
-        """Call LLM and parse response as JSON."""
+        """Call LLM and parse response as JSON.
+
+        FIX: replaced fragile split("```")[1] logic with regex that correctly
+        handles leading text before the fence, missing 'json' tag, and
+        trailing content after the closing fence.
+        """
         raw = self.call(prompt, temperature=temperature, json_mode=True)
-        # Strip markdown fences if present
         raw = raw.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        return json.loads(raw.strip())
+
+        # Try to extract JSON from inside a markdown fence block first
+        fence_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", raw)
+        if fence_match:
+            raw = fence_match.group(1).strip()
+        elif raw.startswith("```"):
+            # Opening fence but no closing fence — strip the opening tag only
+            raw = re.sub(r"^```(?:json)?\s*", "", raw).strip()
+
+        return json.loads(raw)
 
     def test_connection(self) -> bool:
         """Quick health check."""
